@@ -229,6 +229,14 @@ mod tests {
       UpperHexString::from([42, 15, 5]),
       HexString::<{ Case::Upper }>(Cow::Borrowed("2A0F05"))
     );
+    assert_eq!(
+      LowerHexString::from(vec![1, 2, 3, 4, 5]),
+      HexString::<{ Case::Lower }>(Cow::Borrowed("0102030405"))
+    );
+    assert_eq!(
+      UpperHexString::from(vec![1, 2, 3, 4, 5]),
+      HexString::<{ Case::Upper }>(Cow::Borrowed("0102030405"))
+    );
   }
 
   #[test]
