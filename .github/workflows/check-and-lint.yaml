@@ -1,7 +1,6 @@
 name: Check and Lint
 
 on:
-  pull_request:
   push:
 
 jobs:
