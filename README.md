@@ -1,6 +1,9 @@
 [![crates.io](https://img.shields.io/crates/v/hexstring.svg)](https://crates.io/crates/hexstring)
-[![Documentation](https://docs.rs/hexstring/badge.svg)](https://docs.rs/hexstring)
 [![MIT licensed](https://img.shields.io/crates/l/hexstring.svg)](./LICENSE)
+[![Documentation](https://docs.rs/hexstring/badge.svg)](https://docs.rs/hexstring)
+[![Check and Lint](https://github.com/alekece/hexstring-rs/actions/workflows/check-and-lint.yaml/badge.svg)](https://github.com/alekece/hexstring-rs/actions/workflows/check-and-lint.yaml)
+[![Test](https://github.com/alekece/hexstring-rs/actions/workflows/test.yaml/badge.svg)](https://github.com/alekece/hexstring-rs/actions/workflows/test.yaml)
+[![codecov](https://codecov.io/gh/alekece/hexstring-rs/branch/main/graph/badge.svg?token=40M1Q98JMQ)](https://codecov.io/gh/alekece/hexstring-rs)
 
 <!-- cargo-sync-readme start -->
 
