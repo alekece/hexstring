@@ -124,6 +124,36 @@ impl<const C: Case> HexString<C> {
   }
 }
 
+impl LowerHexString {
+  /// Constructs an [`UpperHexString`] from a [`LowerHexString`].
+  pub fn to_uppercase(self) -> UpperHexString {
+    // avoid unnecessary copy on owned string
+    let mut s = match self.0 {
+      Cow::Borrowed(s) => s.to_string(),
+      Cow::Owned(s) => s,
+    };
+
+    s.make_ascii_uppercase();
+
+    HexString::<{ Case::Upper }>(Cow::Owned(s))
+  }
+}
+
+impl UpperHexString {
+  /// Constructs a [`LowerHexString`] from an [`UpperHexString`].
+  pub fn to_lowercase(self) -> LowerHexString {
+    // avoid unnecessary copy on owned string
+    let mut s = match self.0 {
+      Cow::Borrowed(s) => s.to_string(),
+      Cow::Owned(s) => s,
+    };
+
+    s.make_ascii_lowercase();
+
+    HexString::<{ Case::Lower }>(Cow::Owned(s))
+  }
+}
+
 impl<const C: Case> From<&[u8]> for HexString<C> {
   fn from(bytes: &[u8]) -> Self {
     let s = match C {
@@ -284,6 +314,22 @@ mod tests {
       .unwrap();
 
     assert_eq!(bytes, [20, 42, 2, 10, 15]);
+  }
+
+  #[test]
+  fn it_creates_upper_hex_str_from_lower_hex_str() {
+    assert_eq!(
+      LowerHexString::new("aabbccddee").unwrap().to_uppercase(),
+      HexString::<{ Case::Upper }>(Cow::Owned("AABBCCDDEE".to_string()))
+    );
+  }
+
+  #[test]
+  fn it_creates_lower_hex_str_from_upper_str() {
+    assert_eq!(
+      UpperHexString::new("AABBCCDDEE").unwrap().to_lowercase(),
+      HexString::<{ Case::Lower }>(Cow::Owned("aabbccddee".to_string()))
+    );
   }
 
   #[cfg(feature = "serde")]
