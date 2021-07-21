@@ -126,6 +126,8 @@ impl<const C: Case> HexString<C> {
 
 impl LowerHexString {
   /// Constructs an [`UpperHexString`] from a [`LowerHexString`].
+  ///
+  /// This method performs a copy if the internal string is a string literal.
   pub fn to_uppercase(self) -> UpperHexString {
     // avoid unnecessary copy on owned string
     let mut s = match self.0 {
@@ -141,6 +143,8 @@ impl LowerHexString {
 
 impl UpperHexString {
   /// Constructs a [`LowerHexString`] from an [`UpperHexString`].
+  ///
+  /// This method performs a copy if the internal string is a string literal.
   pub fn to_lowercase(self) -> LowerHexString {
     // avoid unnecessary copy on owned string
     let mut s = match self.0 {
