@@ -293,13 +293,13 @@ mod tests {
 
   #[test]
   fn it_converts_into_bytes() {
-    let s = LowerHexString::new("2a1a02").unwrap();
-    let bytes = Vec::from(s);
+    let hex = LowerHexString::new("2a1a02").unwrap();
+    let bytes = Vec::from(hex);
 
     assert_eq!(&bytes[..], [42, 26, 2]);
 
-    let s = UpperHexString::new("2A1A02").unwrap();
-    let bytes = Vec::from(s);
+    let hex = UpperHexString::new("2A1A02").unwrap();
+    let bytes = Vec::from(hex);
 
     assert_eq!(&bytes[..], [42, 26, 2]);
   }
@@ -322,18 +322,30 @@ mod tests {
 
   #[test]
   fn it_creates_upper_hex_str_from_lower_hex_str() {
-    assert_eq!(
-      LowerHexString::new("aabbccddee").unwrap().to_uppercase(),
-      HexString::<{ Case::Upper }>(Cow::Owned("AABBCCDDEE".to_string()))
-    );
+    let s = "aabbccddee";
+    let hex = LowerHexString::new(s).unwrap().to_uppercase();
+    let expected_hex = HexString::<{ Case::Upper }>(Cow::Owned("AABBCCDDEE".to_string()));
+
+    assert_ne!(s, hex.0.as_ref());
+    assert_eq!(hex, expected_hex);
+
+    let hex = LowerHexString::new(s.to_string()).unwrap().to_uppercase();
+
+    assert_eq!(hex, expected_hex);
   }
 
   #[test]
   fn it_creates_lower_hex_str_from_upper_str() {
-    assert_eq!(
-      UpperHexString::new("AABBCCDDEE").unwrap().to_lowercase(),
-      HexString::<{ Case::Lower }>(Cow::Owned("aabbccddee".to_string()))
-    );
+    let s = "AABBCCDDEE";
+    let hex = UpperHexString::new(s).unwrap().to_lowercase();
+    let expected_hex = HexString::<{ Case::Lower }>(Cow::Owned("aabbccddee".to_string()));
+
+    assert_ne!(s, hex.0.as_ref());
+    assert_eq!(hex, expected_hex);
+
+    let hex = UpperHexString::new(s.to_string()).unwrap().to_lowercase();
+
+    assert_eq!(hex, expected_hex);
   }
 
   #[cfg(feature = "serde")]
