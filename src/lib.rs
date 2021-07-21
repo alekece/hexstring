@@ -332,6 +332,7 @@ mod tests {
     let hex = LowerHexString::new(s.to_string()).unwrap().to_uppercase();
 
     assert_eq!(hex, expected_hex);
+    assert_eq!(hex, expected_hex);
   }
 
   #[test]
