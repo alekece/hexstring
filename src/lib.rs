@@ -18,6 +18,7 @@
 //! [serde]: https://serde.rs
 
 #![feature(const_generics)]
+#![cfg_attr(test, feature(cow_is_borrowed))]
 #![allow(incomplete_features)]
 #![deny(missing_docs)]
 
@@ -236,26 +237,28 @@ mod tests {
 
   #[test]
   fn it_constructs_from_owned_str() {
-    assert_eq!(
-      LowerHexString::new("ab04ff".to_string()),
-      Ok(HexString(Cow::Owned("ab04ff".to_string())))
-    );
-    assert_eq!(
-      UpperHexString::new("AB04FF".to_string()),
-      Ok(HexString(Cow::Owned("AB04FF".to_string())))
-    );
+    let hex = LowerHexString::new("ab04ff".to_string()).unwrap();
+
+    assert!(hex.0.is_owned());
+    assert_eq!(hex.0, "ab04ff");
+
+    let hex = UpperHexString::new("AB04FF".to_string()).unwrap();
+
+    assert!(hex.0.is_owned());
+    assert_eq!(hex.0, "AB04FF");
   }
 
   #[test]
   fn it_constructs_from_borrowed_str() {
-    assert_eq!(
-      LowerHexString::new("ab04ff"),
-      Ok(HexString(Cow::Borrowed("ab04ff")))
-    );
-    assert_eq!(
-      UpperHexString::new("AB04FF"),
-      Ok(HexString(Cow::Borrowed("AB04FF")))
-    );
+    let hex = LowerHexString::new("ab04ff").unwrap();
+
+    assert!(hex.0.is_borrowed());
+    assert_eq!(hex.0, "ab04ff");
+
+    let hex = UpperHexString::new("AB04FF").unwrap();
+
+    assert!(hex.0.is_borrowed());
+    assert_eq!(hex.0, "AB04FF");
   }
 
   #[test]
@@ -266,22 +269,10 @@ mod tests {
 
   #[test]
   fn it_constructs_from_bytes() {
-    assert_eq!(
-      LowerHexString::from([42, 15, 5]),
-      HexString::<{ Case::Lower }>(Cow::Borrowed("2a0f05"))
-    );
-    assert_eq!(
-      UpperHexString::from([42, 15, 5]),
-      HexString::<{ Case::Upper }>(Cow::Borrowed("2A0F05"))
-    );
-    assert_eq!(
-      LowerHexString::from(vec![1, 2, 3, 4, 5]),
-      HexString::<{ Case::Lower }>(Cow::Borrowed("0102030405"))
-    );
-    assert_eq!(
-      UpperHexString::from(vec![1, 2, 3, 4, 5]),
-      HexString::<{ Case::Upper }>(Cow::Borrowed("0102030405"))
-    );
+    assert_eq!(LowerHexString::from([42, 15, 5]).0, "2a0f05");
+    assert_eq!(UpperHexString::from([42, 15, 5]).0, "2A0F05");
+    assert_eq!(LowerHexString::from(vec![1, 2, 3, 4, 5]).0, "0102030405");
+    assert_eq!(UpperHexString::from(vec![1, 2, 3, 4, 5]).0, "0102030405");
   }
 
   #[test]
@@ -334,9 +325,12 @@ mod tests {
   fn it_converts_into_fixed_array_of_bytes() {
     use std::convert::TryInto;
 
-    let bytes: [u8; 4] = LowerHexString::new("142a020a").unwrap().try_into().unwrap();
+    let bytes: [u8; 5] = LowerHexString::new("142a020a0f")
+      .unwrap()
+      .try_into()
+      .unwrap();
 
-    assert_eq!(bytes, [20, 42, 2, 10]);
+    assert_eq!(bytes, [20, 42, 2, 10, 15]);
 
     let bytes: [u8; 5] = UpperHexString::new("142A020A0F")
       .unwrap()
@@ -350,28 +344,30 @@ mod tests {
   fn it_creates_upper_hex_str_from_lower_hex_str() {
     let s = "aabbccddee";
     let hex = LowerHexString::new(s).unwrap().to_uppercase();
-    let expected_hex = HexString::<{ Case::Upper }>(Cow::Owned("AABBCCDDEE".to_string()));
 
     assert_ne!(s, hex.0.as_ref());
-    assert_eq!(hex, expected_hex);
+    assert_eq!(hex.0, "AABBCCDDEE");
+    assert!(hex.0.is_owned());
 
     let hex = LowerHexString::new(s.to_string()).unwrap().to_uppercase();
 
-    assert_eq!(hex, expected_hex);
+    assert_eq!(hex.0, "AABBCCDDEE");
+    assert!(hex.0.is_owned());
   }
 
   #[test]
   fn it_creates_lower_hex_str_from_upper_str() {
     let s = "AABBCCDDEE";
     let hex = UpperHexString::new(s).unwrap().to_lowercase();
-    let expected_hex = HexString::<{ Case::Lower }>(Cow::Owned("aabbccddee".to_string()));
 
     assert_ne!(s, hex.0.as_ref());
-    assert_eq!(hex, expected_hex);
+    assert_eq!(hex.0, "aabbccddee");
+    assert!(hex.0.is_owned());
 
     let hex = UpperHexString::new(s.to_string()).unwrap().to_lowercase();
 
-    assert_eq!(hex, expected_hex);
+    assert_eq!(hex.0, "aabbccddee");
+    assert!(hex.0.is_owned());
   }
 
   #[cfg(feature = "serde")]
@@ -381,13 +377,15 @@ mod tests {
 
     #[test]
     fn it_deser_hex_str() {
-      let result: Result<LowerHexString, _> = serde_json::from_str("\"abcd09\"");
+      let hex: LowerHexString = serde_json::from_str("\"abcd09\"").unwrap();
 
-      assert!(result.is_ok());
+      assert_eq!(hex.0, "abcd09");
+      assert!(hex.0.is_owned());
 
-      let result: Result<UpperHexString, _> = serde_json::from_str("\"ABCD09\"");
+      let hex: UpperHexString = serde_json::from_str("\"ABCD09\"").unwrap();
 
-      assert!(result.is_ok());
+      assert_eq!(hex.0, "ABCD09");
+      assert!(hex.0.is_owned());
     }
 
     #[test]
