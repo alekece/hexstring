@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Bump Rust edition to 2021
+
 ## [0.1.2] - 2021-08-11
 ### Added
 - `new_unchecked` method which skips string checking.

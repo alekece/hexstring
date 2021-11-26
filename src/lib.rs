@@ -17,7 +17,7 @@
 //! [cargo-features]: https://doc.rust-lang.org/stable/cargo/reference/features.html#the-features-section
 //! [serde]: https://serde.rs
 
-#![feature(const_generics)]
+#![feature(adt_const_params)]
 #![allow(incomplete_features)]
 #![deny(missing_docs)]
 
