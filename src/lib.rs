@@ -110,7 +110,7 @@ impl<const C: Case> HexString<C> {
   pub fn new<S: Into<Cow<'static, str>>>(s: S) -> Result<Self, Error> {
     let s = s.into();
 
-    if s.len() % 2 != 0 {
+    if s.len() & 1 != 0 {
       return Err(Error::OddLength);
     }
 
