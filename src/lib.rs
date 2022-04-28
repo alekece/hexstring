@@ -138,11 +138,7 @@ impl LowerHexString {
   ///
   /// This method performs a copy if the internal string is a string literal.
   pub fn to_uppercase(self) -> UpperHexString {
-    // avoid unnecessary copy on owned string
-    let mut s = match self.0 {
-      Cow::Borrowed(s) => s.to_string(),
-      Cow::Owned(s) => s,
-    };
+    let mut s = self.0.into_owned();
 
     s.make_ascii_uppercase();
 
@@ -155,11 +151,7 @@ impl UpperHexString {
   ///
   /// This method performs a copy if the internal string is a string literal.
   pub fn to_lowercase(self) -> LowerHexString {
-    // avoid unnecessary copy on owned string
-    let mut s = match self.0 {
-      Cow::Borrowed(s) => s.to_string(),
-      Cow::Owned(s) => s,
-    };
+    let mut s = self.0.into_owned();
 
     s.make_ascii_lowercase();
 
