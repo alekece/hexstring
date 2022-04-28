@@ -21,13 +21,12 @@
 #![allow(incomplete_features)]
 #![deny(missing_docs)]
 
+use std::borrow::Cow;
+use std::convert::{From, TryFrom};
+use std::str;
+
 use derive_more::Display;
 use hex::FromHexError;
-use std::{
-  borrow::Cow,
-  convert::{From, TryFrom},
-  str,
-};
 
 /// Errors than can occurs during [`HexString`] construction.
 ///

@@ -17,3 +17,4 @@ use_try_shorthand = true
 # These following features are still unstable in rustfmt 1.4.6
 wrap_comments = true
 comment_width = 100
+imports_granularity = "Module"
