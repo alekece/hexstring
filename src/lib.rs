@@ -186,7 +186,8 @@ impl<const C: Case> From<HexString<C>> for Vec<u8> {
     // since `HexString` always represents a valid hexadecimal string, the result of `hex::decode`
     // can be safely unwrapped.
     //
-    // Note that this call may panic if the `HexString` has been constructed from `new_unchecked` method.
+    // Note that this call may panic if the `HexString` has been constructed from `new_unchecked`
+    // method.
     hex::decode(s.0.as_ref()).unwrap()
   }
 }
