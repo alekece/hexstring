@@ -17,17 +17,16 @@
 //! [cargo-features]: https://doc.rust-lang.org/stable/cargo/reference/features.html#the-features-section
 //! [serde]: https://serde.rs
 
-#![feature(const_generics)]
+#![feature(adt_const_params)]
 #![allow(incomplete_features)]
 #![deny(missing_docs)]
 
+use std::borrow::Cow;
+use std::convert::{From, TryFrom};
+use std::str;
+
 use derive_more::Display;
 use hex::FromHexError;
-use std::{
-  borrow::Cow,
-  convert::{From, TryFrom},
-  str,
-};
 
 /// Errors than can occurs during [`HexString`] construction.
 ///
@@ -93,6 +92,7 @@ pub enum Case {
 )]
 #[derive(Display, Default, Clone, Debug, PartialEq, Eq)]
 #[display(fmt = "{}", &self.0)]
+#[repr(transparent)]
 pub struct HexString<const C: Case>(Cow<'static, str>);
 
 /// Convenient alias type to represent uppercase hexadecimal string.
@@ -109,7 +109,7 @@ impl<const C: Case> HexString<C> {
   pub fn new<S: Into<Cow<'static, str>>>(s: S) -> Result<Self, Error> {
     let s = s.into();
 
-    if s.len() % 2 != 0 {
+    if s.len() & 1 != 0 {
       return Err(Error::OddLength);
     }
 
@@ -122,6 +122,14 @@ impl<const C: Case> HexString<C> {
 
     Ok(Self(s))
   }
+
+  /// Creates a new [`HexString`] without checking the string.
+  ///
+  /// # Safety
+  /// The string should be a valid hexadecimal string.
+  pub unsafe fn new_unchecked<S: Into<Cow<'static, str>>>(s: S) -> Self {
+    Self(s.into())
+  }
 }
 
 impl LowerHexString {
@@ -129,15 +137,11 @@ impl LowerHexString {
   ///
   /// This method performs a copy if the internal string is a string literal.
   pub fn to_uppercase(self) -> UpperHexString {
-    // avoid unnecessary copy on owned string
-    let mut s = match self.0 {
-      Cow::Borrowed(s) => s.to_string(),
-      Cow::Owned(s) => s,
-    };
+    let mut s = self.0.into_owned();
 
     s.make_ascii_uppercase();
 
-    HexString::<{ Case::Upper }>(Cow::Owned(s))
+    unsafe { UpperHexString::new_unchecked(s) }
   }
 }
 
@@ -146,15 +150,11 @@ impl UpperHexString {
   ///
   /// This method performs a copy if the internal string is a string literal.
   pub fn to_lowercase(self) -> LowerHexString {
-    // avoid unnecessary copy on owned string
-    let mut s = match self.0 {
-      Cow::Borrowed(s) => s.to_string(),
-      Cow::Owned(s) => s,
-    };
+    let mut s = self.0.into_owned();
 
     s.make_ascii_lowercase();
 
-    HexString::<{ Case::Lower }>(Cow::Owned(s))
+    unsafe { LowerHexString::new_unchecked(s) }
   }
 }
 
@@ -165,8 +165,7 @@ impl<const C: Case> From<&[u8]> for HexString<C> {
       Case::Lower => hex::encode(bytes),
     };
 
-    // do not call `HexString::new` on purpose to avoid unnecessary hexadecimal string validation
-    Self(Cow::Owned(s))
+    unsafe { Self::new_unchecked(s) }
   }
 }
 
@@ -186,6 +185,8 @@ impl<const C: Case> From<HexString<C>> for Vec<u8> {
   fn from(s: HexString<C>) -> Self {
     // since `HexString` always represents a valid hexadecimal string, the result of `hex::decode`
     // can be safely unwrapped.
+    //
+    // Note that this call may panic if the `HexString` has been constructed from `new_unchecked` method.
     hex::decode(s.0.as_ref()).unwrap()
   }
 }
@@ -289,6 +290,21 @@ mod tests {
       UpperHexString::new("ABVCD109"),
       Err(Error::InvalidHexCharacter { c: 'V', index: 2 })
     );
+  }
+
+  #[test]
+  fn it_constructs_from_unchecked_str() {
+    let hex = unsafe { LowerHexString::new_unchecked("0a0b0c0d0e") };
+    let bytes = Vec::from(hex);
+
+    assert_eq!(&bytes[..], [10, 11, 12, 13, 14]);
+  }
+
+  #[test]
+  #[should_panic]
+  fn it_fails_to_convert_into_bytes_from_invalid_unchecked_str() {
+    let hex = unsafe { LowerHexString::new_unchecked("thisisnotvalid") };
+    let _ = Vec::from(hex);
   }
 
   #[test]
