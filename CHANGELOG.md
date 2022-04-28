@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2022-04-28
 ### Changed
 - Bump Rust edition to 2021
 
@@ -27,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Convenient type aliases `UpperHexString` and `LowerHexString`.
 - Feature flag `serde` for serde support on `HexString` type.
 
-[Unreleased]: https://github.com/alekece/hextring-rs/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/alekece/hextring-rs/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/alekece/hexstring-rs/releases/tag/v0.1.3
 [0.1.2]: https://github.com/alekece/hexstring-rs/releases/tag/v0.1.2
 [0.1.1]: https://github.com/alekece/hexstring-rs/releases/tag/v0.1.1
 [0.1.0]: https://github.com/alekece/hexstring-rs/releases/tag/v0.1.0
