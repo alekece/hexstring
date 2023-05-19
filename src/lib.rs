@@ -90,7 +90,7 @@ pub enum Case {
   derive(serde::Deserialize, serde::Serialize),
   serde(try_from = "String")
 )]
-#[derive(Display, Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Display, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[display(fmt = "{}", &self.0)]
 #[repr(transparent)]
 pub struct HexString<const C: Case>(Cow<'static, str>);
