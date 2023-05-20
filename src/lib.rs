@@ -24,6 +24,7 @@
 use std::borrow::Cow;
 use std::convert::{From, TryFrom};
 use std::str;
+use std::str::FromStr;
 
 use derive_more::Display;
 use hex::FromHexError;
@@ -90,7 +91,7 @@ pub enum Case {
   derive(serde::Deserialize, serde::Serialize),
   serde(try_from = "String")
 )]
-#[derive(Display, Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Display, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[display(fmt = "{}", &self.0)]
 #[repr(transparent)]
 pub struct HexString<const C: Case>(Cow<'static, str>);
@@ -189,6 +190,14 @@ impl<const C: Case> From<HexString<C>> for Vec<u8> {
     // Note that this call may panic if the `HexString` has been constructed from `new_unchecked`
     // method.
     hex::decode(s.0.as_ref()).unwrap()
+  }
+}
+
+impl<const C: Case> FromStr for HexString<C> {
+  type Err = Error;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    Self::new(s.to_owned())
   }
 }
 
