@@ -23,6 +23,7 @@
 
 use std::borrow::Cow;
 use std::convert::{From, TryFrom};
+use std::marker::ConstParamTy;
 use std::str;
 
 use derive_more::Display;
@@ -34,7 +35,7 @@ use hex::FromHexError;
 pub type Error = FromHexError;
 
 /// Indicates the case of the hexadecimal string.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, ConstParamTy)]
 pub enum Case {
   /// Indicates a lowercase hexadecimal string.
   Lower,
