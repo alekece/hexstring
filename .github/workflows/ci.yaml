@@ -115,10 +115,8 @@ jobs:
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
 
-      - name: Generate coverage report
-        run: |
-          cargo llvm-cov clean --workspace
-          cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info --cobertura --output-path cobertura.xml
+      - name: Generate coverage report (Cobertura)
+        run: cargo llvm-cov --workspace --all-features --cobertura --output-path cobertura.xml
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v4
