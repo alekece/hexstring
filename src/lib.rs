@@ -379,6 +379,14 @@ mod tests {
   }
 
   #[test]
+  fn it_converts_from_str() {
+    let hex = "aabbccddee".parse::<LowerHexString>().unwrap();
+    let expected_hex = HexString::<Lowercase>(Cow::Owned("aabbccddee".to_string()), PhantomData);
+
+    assert_eq!(hex, expected_hex);
+  }
+
+  #[test]
   fn it_creates_upper_hex_str_from_lower_hex_str() {
     let s = "aabbccddee";
     let hex = LowerHexString::new(s).unwrap().to_uppercase();
