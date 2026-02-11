@@ -181,7 +181,7 @@ impl HexString<Lowercase> {
   }
 }
 
-impl UpperHexString {
+impl HexString<Uppercase> {
   /// Constructs a [`HexString<Lowercase>`] from an [`HexString<Uppercase>`].
   ///
   /// This method performs a copy if the internal string is a string literal.
