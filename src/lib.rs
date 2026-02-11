@@ -135,7 +135,7 @@ impl private::Sealed for Uppercase {}
   serde(try_from = "String")
 )]
 #[derive(Clone, Debug, Default, Display, Eq, Hash, Ord, PartialEq, PartialOrd)]
-#[display(fmt = "{}", _0)]
+#[display("{}", _0)]
 #[repr(transparent)]
 pub struct HexString<C: Case>(Cow<'static, str>, PhantomData<C>);
 
