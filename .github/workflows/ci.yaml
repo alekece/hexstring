@@ -2,135 +2,79 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - develop
-    tags-ignore:
-      - v*
+    branches: [main, develop]
+    tags-ignore: [v*]
   pull_request:
-    branches:
-      - develop
+    branches: [develop]
 
 jobs:
-  lints:
+  lint:
     name: Lints
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
-      - name: Install nightly toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: nightly
-          override: true
           components: rustfmt, clippy
-
-      - name: Run cargo check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
+          rustflags: ""
 
       - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all -- --check
+
+      - name: Run cargo check
+        run: cargo check --all-targets --all-features
 
       - name: Run cargo clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
-          name: Clippy Output
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
   build:
     name: Build
-    needs: [lints]
+    needs: [lint]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
-      - name: Install nightly toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: nightly
-          override: true
+          rustflags: ""
 
       - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --all-features
+        run: cargo build --all-features
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features
+        run: cargo test --all-features
 
   build-target:
-    name: Build on ${{ matrix.os }} for ${{ matrix.target }} target
-    needs: [lints]
+    name: Build on ${{ matrix.name }}
+    needs: [lint]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-        target: ['']
         include:
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: macos-latest
-            target: x86_64-apple-ios
-          - os: macos-latest
-            target: aarch64-apple-ios
           - os: windows-latest
-            target: x86_64-pc-windows-gnu
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: windows-latest
-            target: i686-pc-windows-gnu
-          - os: windows-latest
-            target: i686-pc-windows-msvc
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: i686-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: aarch64-linux-android
-          - os: ubuntu-latest
-            target: armv7-linux-androideabi
+            name: Windows
+          - os: macos-latest
+            name: MacOS
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
-      - name: Install nightly toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: nightly
-          target: ${{ matrix.target }}
-          override: true
+          rustflags: ""
 
       - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --all-features
+        run: cargo build --all-features
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features
+        run: cargo test --all-features
 
   coverage:
     name: Code coverage
@@ -138,30 +82,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
-      - name: Install nightly toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: nightly
-          override: true
+          rustflags: ""
 
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          version: 0.22.0
-          args: --all-features
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov
+
+      - name: Generate coverage report (Cobertura)
+        run: cargo llvm-cov --workspace --all-features --cobertura --output-path cobertura.xml
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
-          token: ${{secrets.CODECOV_TOKEN}}
-          files: ./cobertura.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: cobertura.xml
           fail_ci_if_error: true
 
       - name: Archive code coverage results
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
-          name: code-coverage-report
+          name: coverage-report
           path: cobertura.xml

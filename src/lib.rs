@@ -6,7 +6,7 @@
 //! - Construct from both string and string literal
 //! - Convert from and into array of bytes
 //!
-//! The [`HexString`](crate::HexString) type is a tiny immutable wrapper around string and insure it
+//! The [`HexString`] type is a tiny immutable wrapper around string and insure it
 //! always contains a valid hexadecimal string.
 //!
 //! ## Feature flags
@@ -17,38 +17,80 @@
 //! [cargo-features]: https://doc.rust-lang.org/stable/cargo/reference/features.html#the-features-section
 //! [serde]: https://serde.rs
 
-#![feature(adt_const_params)]
-#![allow(incomplete_features)]
 #![deny(missing_docs)]
 
 use std::borrow::Cow;
 use std::convert::{From, TryFrom};
-use std::marker::ConstParamTy;
-use std::str;
-use std::str::FromStr;
+use std::marker::PhantomData;
+use std::str::{self, FromStr};
 
 use derive_more::Display;
 use hex::FromHexError;
 
 /// Errors than can occurs during [`HexString`] construction.
 ///
-/// Refers to [`FromHexError`][hex::FromHexError] for more details.
+/// Refers to [`FromHexError`] for more details.
 pub type Error = FromHexError;
 
-/// Indicates the case of the hexadecimal string.
-#[derive(Debug, PartialEq, Eq, ConstParamTy)]
-pub enum Case {
-  /// Indicates a lowercase hexadecimal string.
-  Lower,
-  /// Indicates a uppercase hexadecimal string.
-  Upper,
+/// Convenient alias type to represent uppercase hexadecimal string.
+pub type UpperHexString = HexString<Uppercase>;
+
+/// Convenient alias type to represent lowercase hexadecimal string.
+pub type LowerHexString = HexString<Lowercase>;
+
+mod private {
+  /// A sealed trait to prevent external implementations of [`Case`].
+  pub trait Sealed {}
 }
+
+/// Provides encoding and validation for hexadecimal strings according to the case.
+///
+/// This trait is sealed to prevent external implementations, ensuring that only `Lowercase` and
+/// `Uppercase` can be used as cases.
+pub trait Case: private::Sealed {
+  /// Encodes the given bytes into a hexadecimal string according to the case.
+  fn encode(bytes: &[u8]) -> String;
+  /// Checks if the given character is a valid hexadecimal character according to the case.
+  fn is_valid(c: char) -> bool;
+}
+
+/// Lowercase hexadecimal string representation.
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Lowercase;
+
+impl Case for Lowercase {
+  fn encode(bytes: &[u8]) -> String {
+    hex::encode(bytes)
+  }
+
+  fn is_valid(c: char) -> bool {
+    matches!(c, '0'..='9' | 'a'..='f')
+  }
+}
+
+impl private::Sealed for Lowercase {}
+
+/// Uppercase hexadecimal string representation.
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Uppercase;
+
+impl Case for Uppercase {
+  fn encode(bytes: &[u8]) -> String {
+    hex::encode_upper(bytes)
+  }
+
+  fn is_valid(c: char) -> bool {
+    matches!(c, '0'..='9' | 'A'..='F')
+  }
+}
+
+impl private::Sealed for Uppercase {}
 
 /// Provides a structured representation of a hexadecimal string.
 ///
 /// It is guaranteed to be a valid hexadecimal string, whether initialized from a string
 /// or from bytes.
-/// A valid ['HexString`] should contain only alphanumerical characters such as :
+/// A valid [`HexString`] should contain only alphanumerical characters such as :
 /// - ff04ad992c
 /// - FF04AD99C
 ///
@@ -60,13 +102,13 @@ pub enum Case {
 /// string.
 ///
 /// ```
-/// use hexstring::{HexString, Case};
+/// use hexstring::{HexString, Uppercase};
 ///
-/// let hex = HexString::<{ Case::Upper }>::new("ABCDEF").unwrap();
+/// let hex = HexString::<Uppercase>::new("ABCDEF").unwrap();
 /// ```
 ///
 /// As the example shown, creating a hexadecimal string is a bit convoluted due to the usage of
-/// const generic parameter.
+/// generic type.
 /// Two convenient type aliases must be used instead of the raw [`HexString`] type :
 ///
 /// ```
@@ -93,97 +135,86 @@ pub enum Case {
   serde(try_from = "String")
 )]
 #[derive(Clone, Debug, Default, Display, Eq, Hash, Ord, PartialEq, PartialOrd)]
-#[display(fmt = "{}", &self.0)]
+#[display("{}", _0)]
 #[repr(transparent)]
-pub struct HexString<const C: Case>(Cow<'static, str>);
+pub struct HexString<C: Case>(Cow<'static, str>, PhantomData<C>);
 
-/// Convenient alias type to represent uppercase hexadecimal string.
-pub type UpperHexString = HexString<{ Case::Upper }>;
-
-/// Convenient alias type to represent lowercase hexadecimal string.
-pub type LowerHexString = HexString<{ Case::Lower }>;
-
-impl<const C: Case> HexString<C> {
+impl<C: Case> HexString<C> {
   /// Constructs a new [`HexString`] from a string.
   ///
   /// # Errors
-  /// This method fails if the given string is not a valid hexadecimal.
-  pub fn new<S: Into<Cow<'static, str>>>(s: S) -> Result<Self, Error> {
+  /// This method fails if the given string is not a valid hexadecimal, i.e. if it has an odd length
+  /// or contains invalid characters.
+  pub fn new(s: impl Into<Cow<'static, str>>) -> Result<Self, Error> {
     let s = s.into();
 
     if s.len() & 1 != 0 {
       return Err(Error::OddLength);
     }
 
-    if let Some((index, c)) = s.chars().enumerate().find(|(_, c)| match C {
-      Case::Lower => !matches!(c, '0'..='9' | 'a'..='f'),
-      Case::Upper => !matches!(c, '0'..='9' | 'A'..='F'),
-    }) {
+    if let Some((index, c)) = s.chars().enumerate().find(|(_, c)| !C::is_valid(*c)) {
       return Err(Error::InvalidHexCharacter { c, index });
     }
 
-    Ok(Self(s))
+    Ok(Self(s, PhantomData))
   }
 
   /// Creates a new [`HexString`] without checking the string.
   ///
   /// # Safety
   /// The string should be a valid hexadecimal string.
-  pub unsafe fn new_unchecked<S: Into<Cow<'static, str>>>(s: S) -> Self {
-    Self(s.into())
+  pub unsafe fn new_unchecked(s: impl Into<Cow<'static, str>>) -> Self {
+    Self(s.into(), PhantomData)
   }
 }
 
-impl LowerHexString {
-  /// Constructs an [`UpperHexString`] from a [`LowerHexString`].
+impl HexString<Lowercase> {
+  /// Constructs an [`HexString<Uppercase>`] from a [`HexString<Lowercase>`].
   ///
   /// This method performs a copy if the internal string is a string literal.
-  pub fn to_uppercase(self) -> UpperHexString {
+  pub fn to_uppercase(self) -> HexString<Uppercase> {
     let mut s = self.0.into_owned();
 
     s.make_ascii_uppercase();
 
-    unsafe { UpperHexString::new_unchecked(s) }
+    unsafe { HexString::new_unchecked(s) }
   }
 }
 
-impl UpperHexString {
-  /// Constructs a [`LowerHexString`] from an [`UpperHexString`].
+impl HexString<Uppercase> {
+  /// Constructs a [`HexString<Lowercase>`] from an [`HexString<Uppercase>`].
   ///
   /// This method performs a copy if the internal string is a string literal.
-  pub fn to_lowercase(self) -> LowerHexString {
+  pub fn to_lowercase(self) -> HexString<Lowercase> {
     let mut s = self.0.into_owned();
 
     s.make_ascii_lowercase();
 
-    unsafe { LowerHexString::new_unchecked(s) }
+    unsafe { HexString::new_unchecked(s) }
   }
 }
 
-impl<const C: Case> From<&[u8]> for HexString<C> {
+impl<C: Case> From<&[u8]> for HexString<C> {
   fn from(bytes: &[u8]) -> Self {
-    let s = match C {
-      Case::Upper => hex::encode_upper(bytes),
-      Case::Lower => hex::encode(bytes),
-    };
+    let s = C::encode(bytes);
 
     unsafe { Self::new_unchecked(s) }
   }
 }
 
-impl<const C: Case> From<Vec<u8>> for HexString<C> {
+impl<C: Case> From<Vec<u8>> for HexString<C> {
   fn from(bytes: Vec<u8>) -> Self {
     Self::from(&bytes[..])
   }
 }
 
-impl<const C: Case, const N: usize> From<[u8; N]> for HexString<C> {
+impl<C: Case, const N: usize> From<[u8; N]> for HexString<C> {
   fn from(bytes: [u8; N]) -> Self {
     Self::from(&bytes[..])
   }
 }
 
-impl<const C: Case> From<HexString<C>> for Vec<u8> {
+impl<C: Case> From<HexString<C>> for Vec<u8> {
   fn from(s: HexString<C>) -> Self {
     // since `HexString` always represents a valid hexadecimal string, the result of `hex::decode`
     // can be safely unwrapped.
@@ -194,7 +225,7 @@ impl<const C: Case> From<HexString<C>> for Vec<u8> {
   }
 }
 
-impl<const C: Case> FromStr for HexString<C> {
+impl<C: Case> FromStr for HexString<C> {
   type Err = Error;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -202,7 +233,7 @@ impl<const C: Case> FromStr for HexString<C> {
   }
 }
 
-impl<const C: Case, const N: usize> TryFrom<HexString<C>> for [u8; N] {
+impl<C: Case, const N: usize> TryFrom<HexString<C>> for [u8; N] {
   type Error = Error;
 
   fn try_from(s: HexString<C>) -> Result<Self, Self::Error> {
@@ -222,7 +253,7 @@ mod seal {
   use std::convert::TryFrom;
 
   #[doc(hidden)]
-  impl<const C: Case> TryFrom<String> for HexString<C> {
+  impl<C: Case> TryFrom<String> for HexString<C> {
     type Error = Error;
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
@@ -239,11 +270,11 @@ mod tests {
   fn it_constructs_from_owned_str() {
     assert_eq!(
       LowerHexString::new("ab04ff".to_string()),
-      Ok(HexString(Cow::Owned("ab04ff".to_string())))
+      Ok(HexString(Cow::Owned("ab04ff".to_string()), PhantomData))
     );
     assert_eq!(
       UpperHexString::new("AB04FF".to_string()),
-      Ok(HexString(Cow::Owned("AB04FF".to_string())))
+      Ok(HexString(Cow::Owned("AB04FF".to_string()), PhantomData))
     );
   }
 
@@ -251,11 +282,11 @@ mod tests {
   fn it_constructs_from_borrowed_str() {
     assert_eq!(
       LowerHexString::new("ab04ff"),
-      Ok(HexString(Cow::Borrowed("ab04ff")))
+      Ok(HexString(Cow::Borrowed("ab04ff"), PhantomData))
     );
     assert_eq!(
       UpperHexString::new("AB04FF"),
-      Ok(HexString(Cow::Borrowed("AB04FF")))
+      Ok(HexString(Cow::Borrowed("AB04FF"), PhantomData))
     );
   }
 
@@ -269,19 +300,19 @@ mod tests {
   fn it_constructs_from_bytes() {
     assert_eq!(
       LowerHexString::from([42, 15, 5]),
-      HexString::<{ Case::Lower }>(Cow::Borrowed("2a0f05"))
+      HexString::<Lowercase>(Cow::Borrowed("2a0f05"), PhantomData)
     );
     assert_eq!(
       UpperHexString::from([42, 15, 5]),
-      HexString::<{ Case::Upper }>(Cow::Borrowed("2A0F05"))
+      HexString::<Uppercase>(Cow::Borrowed("2A0F05"), PhantomData)
     );
     assert_eq!(
       LowerHexString::from(vec![1, 2, 3, 4, 5]),
-      HexString::<{ Case::Lower }>(Cow::Borrowed("0102030405"))
+      HexString::<Lowercase>(Cow::Borrowed("0102030405"), PhantomData)
     );
     assert_eq!(
       UpperHexString::from(vec![1, 2, 3, 4, 5]),
-      HexString::<{ Case::Upper }>(Cow::Borrowed("0102030405"))
+      HexString::<Uppercase>(Cow::Borrowed("0102030405"), PhantomData)
     );
   }
 
@@ -348,10 +379,18 @@ mod tests {
   }
 
   #[test]
+  fn it_converts_from_str() {
+    let hex = "aabbccddee".parse::<LowerHexString>().unwrap();
+    let expected_hex = HexString::<Lowercase>(Cow::Owned("aabbccddee".to_string()), PhantomData);
+
+    assert_eq!(hex, expected_hex);
+  }
+
+  #[test]
   fn it_creates_upper_hex_str_from_lower_hex_str() {
     let s = "aabbccddee";
     let hex = LowerHexString::new(s).unwrap().to_uppercase();
-    let expected_hex = HexString::<{ Case::Upper }>(Cow::Owned("AABBCCDDEE".to_string()));
+    let expected_hex = HexString::<Uppercase>(Cow::Owned("AABBCCDDEE".to_string()), PhantomData);
 
     assert_ne!(s, hex.0.as_ref());
     assert_eq!(hex, expected_hex);
@@ -365,7 +404,7 @@ mod tests {
   fn it_creates_lower_hex_str_from_upper_str() {
     let s = "AABBCCDDEE";
     let hex = UpperHexString::new(s).unwrap().to_lowercase();
-    let expected_hex = HexString::<{ Case::Lower }>(Cow::Owned("aabbccddee".to_string()));
+    let expected_hex = HexString::<Lowercase>(Cow::Owned("aabbccddee".to_string()), PhantomData);
 
     assert_ne!(s, hex.0.as_ref());
     assert_eq!(hex, expected_hex);
