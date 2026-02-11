@@ -86,7 +86,6 @@ impl Case for Uppercase {
 
 impl private::Sealed for Uppercase {}
 
-
 /// Provides a structured representation of a hexadecimal string.
 ///
 /// It is guaranteed to be a valid hexadecimal string, whether initialized from a string
