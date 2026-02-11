@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-02-11
+### Changed
+- Remove the const generic parameter, making the crate fully compatible with **stable Rust**  
+(no more nightly toolchain required).
+- Introduce a sealed `Case` trait to control casing behavior at the type level.
+
+### Added
+- Add `Uppercase` and `Lowercase` tag types implementing `Case`.
+
 ## [0.1.3] - 2022-04-28
 ### Changed
 - Bump Rust edition to 2021
@@ -28,7 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Convenient type aliases `UpperHexString` and `LowerHexString`.
 - Feature flag `serde` for serde support on `HexString` type.
 
-[Unreleased]: https://github.com/alekece/hextring-rs/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/alekece/hextring-rs/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/alekece/hexstring-rs/releases/tag/v0.1.5
 [0.1.3]: https://github.com/alekece/hexstring-rs/releases/tag/v0.1.3
 [0.1.2]: https://github.com/alekece/hexstring-rs/releases/tag/v0.1.2
 [0.1.1]: https://github.com/alekece/hexstring-rs/releases/tag/v0.1.1
